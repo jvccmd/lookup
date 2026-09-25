@@ -1,11 +1,8 @@
 import os
 import sys
-import random
-import time
 import requests
 
 def clear_screen():
-    # Fixes the 'Y' duplicating banner bug on Windows CMD vs Termux
     if os.name == 'nt':
         os.system('cls')
     else:
@@ -62,46 +59,13 @@ def print_banner():
             print(" " * padding + colored)
     print("\n")
 
-def check_ip_format(ip):
-    parts = ip.split('.')
-    if len(parts) == 4 and all(part.isdigit() and 0 <= int(part) <= 255 for part in parts):
-        return True
-    return False
-
-def get_fallback_data(ip):
-    # Triggers localized cryptographic parsing if your VPN blocks the network connection
-    countries = ["United States", "Canada", "Germany", "United Kingdom", "France", "Philippines", "Japan", "Australia", "Singapore", "Brazil"]
-    ccodes = ["US", "CA", "DE", "GB", "FR", "PH", "JP", "AU", "SG", "BR"]
-    regions = ["California", "Ontario", "Bavaria", "England", "Île-de-France", "Metro Manila", "Tokyo", "New South Wales", "Central Region", "São Paulo"]
-    cities = ["Los Angeles", "Toronto", "Munich", "London", "Paris", "Manila", "Shibuya", "Sydney", "Singapore City", "São Paulo City"]
-    isps = ["Cloudflare Inc.", "Google LLC", "DigitalOcean LLC", "Amazon.com Inc.", "Chunghwa Telecom"]
-    asns = ["AS13335", "AS15169", "AS14061", "AS16509", "AS3462"]
-    
-    random.seed(ip)
-    idx = random.randint(0, len(countries) - 1)
-    isp_idx = random.randint(0, len(isps) - 1)
-    
-    print(f"\n\033[38;5;201m[+] RESULTS FOR {ip} (Sandbox Mode):\033[0m")
-    print(f"  \033[38;5;93mCountry:\033[0m      {countries[idx]} ({ccodes[idx]})")
-    print(f"  \033[38;5;93mRegion/State:\033[0m {regions[idx]}")
-    print(f"  \033[38;5;93mCity:\033[0m         {cities[idx]}")
-    print(f"  \033[38;5;93mZip Code:\033[0m     {random.randint(10000, 99999)}")
-    print(f"  \033[38;5;93mLatitude:\033[0m     {round(random.uniform(-90.0, 90.0), 4)}")
-    print(f"  \033[38;5;93mLongitude:\033[0m    {round(random.uniform(-180.0, 180.0), 4)}")
-    print(f"  \033[38;5;93mTimezone:\033[0m     GMT+5")
-    print(f"  \033[38;5;93mISP:\033[0m          {isps[isp_idx]}")
-    print(f"  \033[38;5;93mOrganization:\033[0m Private Network Node")
-    print(f"  \033[38;5;93mASN:\033[0m          {asns[isp_idx]}")
-    
-    org_lower = isps[isp_idx].lower()
-    if "cloudflare" in org_lower or "digitalocean" in org_lower or "amazon" in org_lower:
-        print(f"\n  \033[1;33m[!] Status: May be a vpn.\033[0m")
-
 def get_live_ip_data(ip):
     print(f"\n\033[38;5;128m[*] Getting Ip Data details for {ip}... \033[0m")
     
-    if not check_ip_format(ip):
-        print(f"\n\033[1;31m[-] Error: Invalid target IP address layout format.\033[0m")
+    # Standard engineering format validation
+    parts = ip.split('.')
+    if len(parts) != 4 or not all(part.isdigit() and 0 <= int(part) <= 255 for part in parts):
+        print(f"\n\033[1;31m[-] Error: Invalid target IP address formatting profile.\033[0m")
         return
         
     headers = {
@@ -110,11 +74,14 @@ def get_live_ip_data(ip):
     }
     
     try:
-        response = requests.get(f"https://ipapi.co/{ip}/json/", headers=headers, timeout=6)
+        # Pull live operational coordinates 
+        response = requests.get(f"https://ipapi.co{ip}/json/", headers=headers, timeout=8)
         
-        # If API rate limits or blocks due to your computer VPN, run sandbox mode instantly
-        if response.status_code != 200:
-            get_fallback_data(ip)
+        if response.status_code == 429:
+            print("\n\033[1;31m[-] Live Database Block: Your VPN provider has hit the lookup limit rate-ceiling. Try changing your VPN server node.\033[0m")
+            return
+        elif response.status_code != 200:
+            print(f"\n\033[1;31m[-] Handshake Dropped: Server returned status code {response.status_code}.\033[0m")
             return
             
         data = response.json()
@@ -137,10 +104,10 @@ def get_live_ip_data(ip):
             if any(vpn in org_lower for vpn in known_vpns):
                 print(f"\n  \033[1;33m[!] Status: May be a vpn.\033[0m")
         else:
-            get_fallback_data(ip)
+            print(f"\n\033[1;31m[-] Database Error: {data.get('reason', 'Invalid execution parameters.')}\033[0m")
             
-    except Exception:
-        get_fallback_data(ip)
+    except Exception as e:
+        print("\n\033[1;31m[-] Connection Refused: Handshake timed out over the active tunnel routing system.\033[0m")
 
 def main():
     while True:
