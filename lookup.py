@@ -67,32 +67,43 @@ def get_live_ip_data(ip):
         print(f"\n\033[1;31m[-] Error: Invalid target IP address layout format.\033[0m")
         return
         
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Accept": "application/json"
+    }
+    
     try:
-        # Requesting through unencrypted direct-pipeline query parameters
-        url = f"http://ip-api.com{ip}?fields=status,message,country,countryCode,regionName,city,zip,lat,lon,timezone,isp,org,as,proxy,hosting,query"
-        response = requests.get(url, timeout=10)
+        # Encrypted HTTPS query targeting a different independent provider database
+        url = f"https://ipwhois.app{ip}"
+        response = requests.get(url, headers=headers, timeout=12)
         data = response.json()
         
-        if data.get("status") == "success":
-            print(f"\n\033[38;5;201m[+] RESULTS FOR {data.get('query')}:\033[0m")
-            print(f"  \033[38;5;93mCountry:\033[0m      {data.get('country')} ({data.get('countryCode')})")
-            print(f"  \033[38;5;93mRegion/State:\033[0m {data.get('regionName')}")
-            print(f"  \033[38;5;93mCity:\033[0m         {data.get('city')}")
-            print(f"  \033[38;5;93mZip Code:\033[0m     {data.get('zip', 'N/A')}")
-            print(f"  \033[38;5;93mLatitude:\033[0m     {data.get('lat')}")
-            print(f"  \033[38;5;93mLongitude:\033[0m    {data.get('lon')}")
-            print(f"  \033[38;5;93mTimezone:\033[0m     {data.get('timezone')}")
-            print(f"  \033[38;5;93mISP:\033[0m          {data.get('isp')}")
-            print(f"  \033[38;5;93mOrganization:\033[0m {data.get('org')}")
-            print(f"  \033[38;5;93mASN:\033[0m          {data.get('as')}")
+        if data.get("completed") is True or data.get("success", True) is True:
+            # Handle empty values safely if the specific range is private
+            country = data.get('country', 'N/A')
+            ccode = data.get('country_code', 'N/A')
             
-            if data.get('proxy') or data.get('hosting') or "cloudflare" in str(data.get('isp')).lower():
+            print(f"\n\033[38;5;201m[+] RESULTS FOR {data.get('ip')}:\033[0m")
+            print(f"  \033[38;5;93mCountry:\033[0m      {country} ({ccode})")
+            print(f"  \033[38;5;93mRegion/State:\033[0m {data.get('region', 'N/A')}")
+            print(f"  \033[38;5;93mCity:\033[0m         {data.get('city', 'N/A')}")
+            print(f"  \033[38;5;93mZip Code:\033[0m     {data.get('postal', 'N/A')}")
+            print(f"  \033[38;5;93mLatitude:\033[0m     {data.get('latitude', 'N/A')}")
+            print(f"  \033[38;5;93mLongitude:\033[0m    {data.get('longitude', 'N/A')}")
+            print(f"  \033[38;5;93mTimezone:\033[0m     {data.get('timezone', 'N/A')}")
+            print(f"  \033[38;5;93mISP:\033[0m          {data.get('isp', 'N/A')}")
+            print(f"  \033[38;5;93mOrganization:\033[0m {data.get('org', 'N/A')}")
+            print(f"  \033[38;5;93mASN:\033[0m          {data.get('asn', 'N/A')}")
+            
+            # Integrated smart protection block trace rules
+            security = data.get('security', {})
+            if security.get('vpn') or security.get('proxy') or "cloudflare" in str(data.get('isp')).lower():
                 print(f"\n  \033[1;33m[!] Status: May be a vpn.\033[0m")
         else:
             print(f"\n\033[1;31m[-] Lookup Error: {data.get('message', 'Target rejected.')}\033[0m")
             
     except Exception:
-        print("\n\033[1;31m[-] Error: Your network dropped the request. Check your Wi-Fi router connectivity.\033[0m")
+        print("\n\033[1;31m[-] Error: Your network dropped the request. Secure handshake failed.\033[0m")
 
 def main():
     while True:
