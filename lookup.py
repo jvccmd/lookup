@@ -1,7 +1,5 @@
 import os
 import sys
-import random
-import time
 import requests
 
 def clear_screen():
@@ -61,74 +59,21 @@ def print_banner():
             print(" " * padding + colored)
     print("\n")
 
-def check_ip_format(ip):
-    parts = ip.split('.')
-    return len(parts) == 4 and all(part.isdigit() and 0 <= int(part) <= 255 for part in parts)
-
-def get_fallback_data(ip):
-    # Generates unique, localized tracking parameters if ALL internet servers block your VPN connection
-    countries = ["United States", "Canada", "Germany", "United Kingdom", "France", "Philippines", "Japan", "Australia", "Singapore", "Brazil"]
-    ccodes = ["US", "CA", "DE", "GB", "FR", "PH", "JP", "AU", "SG", "BR"]
-    regions = ["California", "Ontario", "Bavaria", "England", "Île-de-France", "Metro Manila", "Tokyo", "New South Wales", "Central Region", "São Paulo"]
-    cities = ["Los Angeles", "Toronto", "Munich", "London", "Paris", "Manila", "Shibuya", "Sydney", "Singapore City", "São Paulo City"]
-    isps = ["Cloudflare Inc.", "Google LLC", "DigitalOcean LLC", "Amazon.com Inc.", "Chunghwa Telecom"]
-    asns = ["AS13335", "AS15169", "AS14061", "AS16509", "AS3462"]
-    
-    random.seed(ip)
-    idx = random.randint(0, len(countries) - 1)
-    isp_idx = random.randint(0, len(isps) - 1)
-    
-    print(f"\n\033[38;5;201m[+] RESULTS FOR {ip} (Local Sandbox Mode):\033[0m")
-    print(f"  \033[38;5;93mCountry:\033[0m      {countries[idx]} ({ccodes[idx]})")
-    print(f"  \033[38;5;93mRegion/State:\033[0m {regions[idx]}")
-    print(f"  \033[38;5;93mCity:\033[0m         {cities[idx]}")
-    print(f"  \033[38;5;93mZip Code:\033[0m     {random.randint(10000, 99999)}")
-    print(f"  \033[38;5;93mLatitude:\033[0m     {round(random.uniform(-90.0, 90.0), 4)}")
-    print(f"  \033[38;5;93mLongitude:\033[0m    {round(random.uniform(-180.0, 180.0), 4)}")
-    print(f"  \033[38;5;93mTimezone:\033[0m     GMT+8")
-    print(f"  \033[38;5;93mISP:\033[0m          {isps[isp_idx]}")
-    print(f"  \033[38;5;93mOrganization:\033[0m Private Network Node")
-    print(f"  \033[38;5;93mASN:\033[0m          {asns[isp_idx]}")
-    
-    org_lower = isps[isp_idx].lower()
-    if "cloudflare" in org_lower or "digitalocean" in org_lower or "amazon" in org_lower:
-        print(f"\n  \033[1;33m[!] Status: May be a vpn.\033[0m")
-
 def get_live_ip_data(ip):
     print(f"\n\033[38;5;128m[*] Getting Ip Data details for {ip}... \033[0m")
     
-    if not check_ip_format(ip):
-        print(f"\n\033[1;31m[-] Error: Invalid target IP address formatting layout.\033[0m")
+    parts = ip.split('.')
+    if len(parts) != 4 or not all(part.isdigit() and 0 <= int(part) <= 255 for part in parts):
+        print(f"\n\033[1;31m[-] Error: Invalid target IP address layout format.\033[0m")
         return
-
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
-    
-    # ── PIPELINE PIPING PIPER (TRY SERVER 1) ──
+        
     try:
-        response = requests.get(f"https://ipapi.co{ip}/json/", headers=headers, timeout=5)
-        if response.status_code == 200 and "error" not in response.json():
-            data = response.json()
-            print(f"\n\033[38;5;201m[+] RESULTS FOR {data.get('ip')}:\033[0m")
-            print(f"  \033[38;5;93mCountry:\033[0m      {data.get('country_name')} ({data.get('country_code')})")
-            print(f"  \033[38;5;93mRegion/State:\033[0m {data.get('region')}")
-            print(f"  \033[38;5;93mCity:\033[0m         {data.get('city')}")
-            print(f"  \033[38;5;93mZip Code:\033[0m     {data.get('postal', 'N/A')}")
-            print(f"  \033[38;5;93mLatitude:\033[0m     {data.get('latitude')}")
-            print(f"  \033[38;5;93mLongitude:\033[0m    {data.get('longitude')}")
-            print(f"  \033[38;5;93mTimezone:\033[0m     {data.get('timezone')}")
-            print(f"  \033[38;5;93mISP:\033[0m          {data.get('org')}")
-            print(f"  \033[38;5;93mASN:\033[0m          {data.get('asn')}")
-            if any(x in str(data.get('org', '')).lower() for x in ["cloudflare", "digitalocean", "amazon", "google", "vpn"]):
-                print(f"\n  \033[1;33m[!] Status: May be a vpn.\033[0m")
-            return
-    except Exception:
-        pass
-
-    # ── PIPELINE PIPING PIPER (ROTATING BACKUP ENGINE TO SERVER 2) ──
-    try:
-        response = requests.get(f"http://ip-api.com{ip}?fields=status,message,country,countryCode,regionName,city,zip,lat,lon,timezone,isp,org,as,proxy,hosting,query", timeout=5)
-        if response.status_code == 200 and response.json().get("status") == "success":
-            data = response.json()
+        # Requesting through unencrypted direct-pipeline query parameters
+        url = f"http://ip-api.com{ip}?fields=status,message,country,countryCode,regionName,city,zip,lat,lon,timezone,isp,org,as,proxy,hosting,query"
+        response = requests.get(url, timeout=10)
+        data = response.json()
+        
+        if data.get("status") == "success":
             print(f"\n\033[38;5;201m[+] RESULTS FOR {data.get('query')}:\033[0m")
             print(f"  \033[38;5;93mCountry:\033[0m      {data.get('country')} ({data.get('countryCode')})")
             print(f"  \033[38;5;93mRegion/State:\033[0m {data.get('regionName')}")
@@ -140,14 +85,14 @@ def get_live_ip_data(ip):
             print(f"  \033[38;5;93mISP:\033[0m          {data.get('isp')}")
             print(f"  \033[38;5;93mOrganization:\033[0m {data.get('org')}")
             print(f"  \033[38;5;93mASN:\033[0m          {data.get('as')}")
+            
             if data.get('proxy') or data.get('hosting') or "cloudflare" in str(data.get('isp')).lower():
                 print(f"\n  \033[1;33m[!] Status: May be a vpn.\033[0m")
-            return
+        else:
+            print(f"\n\033[1;31m[-] Lookup Error: {data.get('message', 'Target rejected.')}\033[0m")
+            
     except Exception:
-        pass
-
-    # ── PIPELINE PIPING PIPER (IF EVERYTHING DROPS, FORCE STABLE SECURE SANDBOX) ──
-    get_fallback_data(ip)
+        print("\n\033[1;31m[-] Error: Your network dropped the request. Check your Wi-Fi router connectivity.\033[0m")
 
 def main():
     while True:
