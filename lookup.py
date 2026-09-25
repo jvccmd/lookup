@@ -62,52 +62,32 @@ def print_banner():
 def get_live_ip_data(ip):
     print(f"\n\033[38;5;128m[*] Getting Ip Data details for {ip}... \033[0m")
     
-    # Standard engineering format validation
-    parts = ip.split('.')
-    if len(parts) != 4 or not all(part.isdigit() and 0 <= int(part) <= 255 for part in parts):
-        print(f"\n\033[1;31m[-] Error: Invalid target IP address formatting profile.\033[0m")
-        return
-        
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-        "Accept": "application/json"
-    }
-    
     try:
-        # Pull live operational coordinates 
-        response = requests.get(f"https://ipapi.co{ip}/json/", headers=headers, timeout=8)
-        
-        if response.status_code == 429:
-            print("\n\033[1;31m[-] Live Database Block: Your VPN provider has hit the lookup limit rate-ceiling. Try changing your VPN server node.\033[0m")
-            return
-        elif response.status_code != 200:
-            print(f"\n\033[1;31m[-] Handshake Dropped: Server returned status code {response.status_code}.\033[0m")
-            return
-            
+        # Changed to a highly stable endpoint configuration
+        response = requests.get(f"http://ip-api.com{ip}?fields=status,message,country,countryCode,regionName,city,zip,lat,lon,timezone,isp,org,as,proxy,hosting,query", timeout=8)
         data = response.json()
         
-        if "error" not in data:
-            print(f"\n\033[38;5;201m[+] RESULTS FOR {data.get('ip')}:\033[0m")
-            print(f"  \033[38;5;93mCountry:\033[0m      {data.get('country_name')} ({data.get('country_code')})")
-            print(f"  \033[38;5;93mRegion/State:\033[0m {data.get('region')}")
+        if data.get("status") == "success":
+            print(f"\n\033[38;5;201m[+] RESULTS FOR {data.get('query')}:\033[0m")
+            print(f"  \033[38;5;93mCountry:\033[0m      {data.get('country')} ({data.get('countryCode')})")
+            print(f"  \033[38;5;93mRegion/State:\033[0m {data.get('regionName')}")
             print(f"  \033[38;5;93mCity:\033[0m         {data.get('city')}")
-            print(f"  \033[38;5;93mZip Code:\033[0m     {data.get('postal')}")
-            print(f"  \033[38;5;93mLatitude:\033[0m     {data.get('latitude')}")
-            print(f"  \033[38;5;93mLongitude:\033[0m    {data.get('longitude')}")
+            print(f"  \033[38;5;93mZip Code:\033[0m     {data.get('zip', 'N/A')}")
+            print(f"  \033[38;5;93mLatitude:\033[0m     {data.get('lat')}")
+            print(f"  \033[38;5;93mLongitude:\033[0m    {data.get('lon')}")
             print(f"  \033[38;5;93mTimezone:\033[0m     {data.get('timezone')}")
-            print(f"  \033[38;5;93mISP:\033[0m          {data.get('org')}")
-            print(f"  \033[38;5;93mASN:\033[0m          {data.get('asn')}")
+            print(f"  \033[38;5;93mISP:\033[0m          {data.get('isp')}")
+            print(f"  \033[38;5;93mOrganization:\033[0m {data.get('org')}")
+            print(f"  \033[38;5;93mASN:\033[0m          {data.get('as')}")
             
-            org_lower = str(data.get('org', '')).lower()
-            known_vpns = ["cloudflare", "digitalocean", "amazon", "google", "linode", "ovh", "m247", "nordvpn", "expressvpn", "surfshark"]
-            
-            if any(vpn in org_lower for vpn in known_vpns):
+            # Checks if the target IP you searched is a VPN
+            if data.get('proxy') or data.get('hosting') or "cloudflare" in str(data.get('isp')).lower():
                 print(f"\n  \033[1;33m[!] Status: May be a vpn.\033[0m")
         else:
-            print(f"\n\033[1;31m[-] Database Error: {data.get('reason', 'Invalid execution parameters.')}\033[0m")
+            print(f"\n\033[1;31m[-] IP Lookup Error: {data.get('message', 'Invalid entry')}\033[0m")
             
-    except Exception as e:
-        print("\n\033[1;31m[-] Connection Refused: Handshake timed out over the active tunnel routing system.\033[0m")
+    except Exception:
+        print("\n\033[1;31m[-] Network Error: The server blocked your machine's connection request.\033[0m")
 
 def main():
     while True:
